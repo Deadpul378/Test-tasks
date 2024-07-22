@@ -1,24 +1,35 @@
-function insertDots(str) {
-  let result = [];
-  let n = str.length;
+import TelegramBot from "node-telegram-bot-api";
+import axios from "axios";
 
-  let max = Math.pow(2, n - 1);
+const token = "7079235887:AAHxixLSJsPaYPiaitCHG-m3tS6YjnVbrsc";
+const bot = new TelegramBot(token, { polling: true });
 
-  for (let i = 0; i < max; i++) {
-    let current = str[0];
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
 
-    for (let j = 0; j < n - 1; j++) {
-      if (i & (1 << j)) {
-        current += ".";
-      }
-      current += str[j + 1];
+  console.log(`Message from ${msg.from.username}: ${text}`);
+
+  if (text.toLowerCase() === "photo") {
+    try {
+      const response = await axios.get("https://picsum.photos/200/300", {
+        responseType: "arraybuffer",
+      });
+      const photoBuffer = Buffer.from(response.data, "binary");
+
+      await bot.sendPhoto(chatId, photoBuffer, {
+        caption: "Here is your random photo!",
+      });
+      console.log("Photo sent successfully");
+    } catch (error) {
+      console.error("Error sending photo:", error);
     }
-
-    result.push(current);
+  } else {
+    try {
+      await bot.sendMessage(chatId, `You said: ${text}`);
+      console.log("Echo message sent successfully");
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   }
-
-  return result;
-}
-
-console.log(insertDots("abc"));
-console.log(insertDots("abcdefg"));
+});
