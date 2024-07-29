@@ -6,50 +6,72 @@ const weatherApiKey = "b4614c7c96369265bf5a92c70c916dc7";
 
 const bot = new TelegramBot(botToken, { polling: true });
 
+const mainMenu = {
+  reply_markup: {
+    keyboard: [[{ text: "Weather forecast in London" }], [{ text: "Weather forecast in New York" }], [{ text: "Back to menu" }]],
+    resize_keyboard: true,
+  },
+};
+
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, "Choose a city:", {
-    reply_markup: {
-      inline_keyboard: [[{ text: "Weather forecast in London", callback_data: "London" }], [{ text: "Weather forecast in New York", callback_data: "New York" }]],
-    },
-  });
+  bot.sendMessage(chatId, "Welcome! Use the menu below to choose a city and interval for the weather forecast.", mainMenu);
 });
 
-bot.on("callback_query", async (query) => {
-  const chatId = query.message.chat.id;
-  const [interval, city] = query.data.includes("_") ? query.data.split("_") : [null, query.data];
+bot.on("message", (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
 
-  if (!interval) {
+  if (text === "Back to menu") {
+    bot.sendMessage(chatId, "Back to main menu:", mainMenu);
+  } else if (text === "Weather forecast in London" || text === "Weather forecast in New York") {
+    const city = text.split(" in ")[1];
     bot.sendMessage(chatId, `Choose the interval for ${city}:`, {
       reply_markup: {
-        inline_keyboard: [[{ text: "With a 3-hour interval", callback_data: `3_${city}` }], [{ text: "With a 6-hour interval", callback_data: `6_${city}` }]],
+        keyboard: [[{ text: `3-hour interval for ${city}` }], [{ text: `6-hour interval for ${city}` }], [{ text: "Back to menu" }]],
+        resize_keyboard: true,
       },
     });
-    return;
+  } else if (text.startsWith("3-hour interval for") || text.startsWith("6-hour interval for")) {
+    const [intervalHours, city] = text.split(" for ");
+    const interval = intervalHours.startsWith("3") ? 3 : 6;
+
+    getWeatherForecast(chatId, city, interval);
   }
+});
 
-  const intervalHours = interval === "3" ? 3 : 6;
-
+async function getWeatherForecast(chatId, city, intervalHours) {
   try {
     const response = await axios.get("http://api.openweathermap.org/data/2.5/forecast", {
       params: {
         q: city,
         units: "metric",
-        cnt: intervalHours === 3 ? 8 : 4,
+        cnt: 40,
         appid: weatherApiKey,
       },
     });
 
     if (response.data && response.data.list) {
-      const forecasts = response.data.list
-        .filter((_, index) => index % (intervalHours / 3) === 0)
-        .map((forecast) => {
-          const date = new Date(forecast.dt * 1000);
-          return `${date.getHours()}:00 - ${forecast.main.temp}°C, ${forecast.weather[0].description}`;
-        })
-        .join("\n");
+      const forecasts = {};
+      response.data.list.forEach((forecast) => {
+        const date = new Date(forecast.dt * 1000);
+        const day = date.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
 
-      bot.sendMessage(chatId, `Weather forecast for ${city} with a ${intervalHours}-hour interval:\n\n${forecasts}`);
+        if (!forecasts[day]) {
+          forecasts[day] = [];
+        }
+
+        if (date.getHours() % intervalHours === 0) {
+          forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
+        }
+      });
+
+      let message = `Погода в ${city}:\n\n`;
+      for (const [day, dayForecasts] of Object.entries(forecasts)) {
+        message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
+      }
+
+      bot.sendMessage(chatId, message.trim());
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
     }
@@ -57,4 +79,4 @@ bot.on("callback_query", async (query) => {
     console.error("Error retrieving weather data:", error);
     bot.sendMessage(chatId, "Sorry, there was an error retrieving the weather data.");
   }
-});
+}

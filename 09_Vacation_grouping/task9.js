@@ -1,24 +1,37 @@
-function insertDots(str) {
-  let result = [];
-  let n = str.length;
+import fs from "fs";
 
-  let max = Math.pow(2, n - 1);
-
-  for (let i = 0; i < max; i++) {
-    let current = str[0];
-
-    for (let j = 0; j < n - 1; j++) {
-      if (i & (1 << j)) {
-        current += ".";
-      }
-      current += str[j + 1];
-    }
-
-    result.push(current);
+fs.readFile("vacations.json", "utf8", (err, data) => {
+  if (err) {
+    console.error("Ошибка чтения файла:", err);
+    return;
   }
 
-  return result;
-}
+  const input = JSON.parse(data);
+  const result = {};
 
-console.log(insertDots("abc"));
-console.log(insertDots("abcdefg"));
+  input.forEach((vacation) => {
+    const userId = vacation.user._id;
+    const userName = vacation.user.name;
+    const vacationPeriod = { startDate: vacation.startDate, endDate: vacation.endDate };
+
+    if (!result[userId]) {
+      result[userId] = {
+        userId: userId,
+        name: userName,
+        weekendDates: [],
+      };
+    }
+
+    result[userId].weekendDates.push(vacationPeriod);
+  });
+
+  const output = Object.values(result);
+
+  fs.writeFile("output.json", JSON.stringify(output, null, 2), (err) => {
+    if (err) {
+      console.error("Ошибка записи файла:", err);
+      return;
+    }
+    console.log("Данные успешно записаны в output.json");
+  });
+});

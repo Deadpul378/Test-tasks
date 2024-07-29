@@ -1,4 +1,4 @@
-const readline = require("readline");
+import readline from "readline";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -47,7 +47,7 @@ Choose operations separated by spaces (e.g., 1 3 5):
       results.push("Unique words: " + [...new Set(words)].join(", "));
     }
     if (operations.includes(6)) {
-      results.push("Unique values: " + [...new Set(items)].join(", "));
+      results.push("Unique values: " + [...new Set(numbers)].join(", "));
     }
 
     console.log("Results:\n" + results.join("\n"));

@@ -6,16 +6,13 @@ const weatherApiKey = "b4614c7c96369265bf5a92c70c916dc7";
 
 const bot = new TelegramBot(botToken, { polling: true });
 
-// Установка команд бота
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
-// Обработка команды /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   sendMainMenu(chatId);
 });
 
-// Обработка сообщений с клавиатуры
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -34,10 +31,13 @@ bot.on("message", async (msg) => {
     case "New York":
       sendIntervalSelection(chatId, text);
       break;
-    case "3_Hour Interval":
-    case "6_Hour Interval":
+    case "3-hour interval for London":
+    case "6-hour interval for London":
+    case "3-hour interval for New York":
+    case "6-hour interval for New York":
       const interval = text.startsWith("3") ? 3 : 6;
-      await sendWeatherForecast(chatId, interval);
+      const city = text.includes("London") ? "London" : "New York";
+      await sendWeatherForecast(chatId, city, interval);
       break;
     case "USD":
     case "EUR":
@@ -48,7 +48,6 @@ bot.on("message", async (msg) => {
   }
 });
 
-// Функция для отправки основного меню
 function sendMainMenu(chatId) {
   bot.sendMessage(chatId, "Choose an option:", {
     reply_markup: {
@@ -58,7 +57,6 @@ function sendMainMenu(chatId) {
   });
 }
 
-// Функция для отправки меню выбора города для погоды
 function sendWeatherMenu(chatId) {
   bot.sendMessage(chatId, "Choose a city for weather forecast:", {
     reply_markup: {
@@ -68,17 +66,15 @@ function sendWeatherMenu(chatId) {
   });
 }
 
-// Функция для отправки меню выбора интервала
 function sendIntervalSelection(chatId, city) {
   bot.sendMessage(chatId, `Choose the interval for ${city}:`, {
     reply_markup: {
-      keyboard: [[{ text: "3_Hour Interval" }], [{ text: "6_Hour Interval" }], [{ text: "Back to Main Menu" }]],
+      keyboard: [[{ text: `3-hour interval for ${city}` }], [{ text: `6-hour interval for ${city}` }], [{ text: "Back to Main Menu" }]],
       resize_keyboard: true,
     },
   });
 }
 
-// Функция для отправки меню выбора валюты для курсов обмена
 function sendExchangeMenu(chatId) {
   bot.sendMessage(chatId, "Choose a currency for exchange rates:", {
     reply_markup: {
@@ -88,30 +84,44 @@ function sendExchangeMenu(chatId) {
   });
 }
 
-// Функция для получения прогноза погоды с выбранным интервалом
-async function sendWeatherForecast(chatId, interval) {
-  const city = interval === 3 ? "London" : "New York"; // Для примера, выбираем один из городов в зависимости от интервала
-
+async function sendWeatherForecast(chatId, city, interval) {
   try {
     const response = await axios.get("http://api.openweathermap.org/data/2.5/forecast", {
       params: {
         q: city,
         units: "metric",
-        cnt: interval === 3 ? 8 : 4,
+        cnt: 40,
         appid: weatherApiKey,
       },
     });
 
     if (response.data && response.data.list) {
-      const forecasts = response.data.list
-        .filter((_, index) => index % (interval / 3) === 0)
-        .map((forecast) => {
-          const date = new Date(forecast.dt * 1000);
-          return `${date.getHours()}:00 - ${forecast.main.temp}°C, ${forecast.weather[0].description}`;
-        })
-        .join("\n");
+      const forecasts = {};
+      response.data.list.forEach((forecast) => {
+        const date = new Date(forecast.dt * 1000);
+        const day = date.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
 
-      bot.sendMessage(chatId, `Weather forecast for ${city} with a ${interval}-hour interval:\n\n${forecasts}`);
+        if (!forecasts[day]) {
+          forecasts[day] = [];
+        }
+
+        if (interval === 6) {
+          if (date.getHours() % 6 === 0) {
+            forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
+          }
+        } else {
+          if (date.getHours() % 3 === 0) {
+            forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
+          }
+        }
+      });
+
+      let message = `Погода в ${city}:\n\n`;
+      for (const [day, dayForecasts] of Object.entries(forecasts)) {
+        message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
+      }
+
+      bot.sendMessage(chatId, message.trim());
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
     }
@@ -121,11 +131,21 @@ async function sendWeatherForecast(chatId, interval) {
   }
 }
 
-// Функция для получения курсов валют
 async function sendExchangeRate(chatId, currency) {
   try {
-    // Логика получения курсов валют
-    bot.sendMessage(chatId, `${currency} Exchange Rates`);
+    const privatResponse = await axios.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5");
+    const monoResponse = await axios.get("https://api.monobank.ua/bank/currency");
+
+    const privatRate = privatResponse.data.find((rate) => rate.ccy === currency);
+    const monoRate = monoResponse.data.find((rate) => rate.currencyCodeA === (currency === "USD" ? 840 : 978) && rate.currencyCodeB === 980);
+
+    const responseMessage = `
+    ${currency} Exchange Rates:
+    PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
+    Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
+    `;
+
+    bot.sendMessage(chatId, responseMessage.trim());
   } catch (error) {
     console.error("Error retrieving exchange rates:", error);
     bot.sendMessage(chatId, "Sorry, there was an error retrieving the exchange rates.");

@@ -1,24 +1,52 @@
-function insertDots(str) {
-  let result = [];
-  let n = str.length;
+import fs from "fs";
+import { performance } from "perf_hooks";
 
-  let max = Math.pow(2, n - 1);
+const readPhrasesFromFile = (filePath) => {
+  return fs.readFileSync(filePath, "utf-8").split("\n").filter(Boolean);
+};
 
-  for (let i = 0; i < max; i++) {
-    let current = str[0];
+const getUniqueUsernames = (files) => {
+  const uniqueUsernames = new Set();
+  files.forEach((file) => {
+    const phrases = readPhrasesFromFile(file);
+    phrases.forEach((phrase) => uniqueUsernames.add(phrase));
+  });
+  return uniqueUsernames.size;
+};
 
-    for (let j = 0; j < n - 1; j++) {
-      if (i & (1 << j)) {
-        current += ".";
-      }
-      current += str[j + 1];
-    }
+const getUsernamesInAllFiles = (files) => {
+  const usernameCount = {};
+  files.forEach((file) => {
+    const phrases = readPhrasesFromFile(file);
+    const uniquePhrases = new Set(phrases);
+    uniquePhrases.forEach((phrase) => {
+      usernameCount[phrase] = (usernameCount[phrase] || 0) + 1;
+    });
+  });
+  return Object.values(usernameCount).filter((count) => count === files.length).length;
+};
 
-    result.push(current);
-  }
+const getUsernamesInAtLeastNFiles = (files, n) => {
+  const usernameCount = {};
+  files.forEach((file) => {
+    const phrases = readPhrasesFromFile(file);
+    const uniquePhrases = new Set(phrases);
+    uniquePhrases.forEach((phrase) => {
+      usernameCount[phrase] = (usernameCount[phrase] || 0) + 1;
+    });
+  });
+  return Object.values(usernameCount).filter((count) => count >= n).length;
+};
 
-  return result;
-}
+const files = Array.from({ length: 20 }, (_, i) => `../files/out${i}.txt`);
 
-console.log(insertDots("abc"));
-console.log(insertDots("abcdefg"));
+const measureExecutionTime = (fn, ...args) => {
+  const startTime = performance.now();
+  const result = fn(...args);
+  const endTime = performance.now();
+  console.log(`Result: ${result}, Time: ${endTime - startTime} ms`);
+};
+
+measureExecutionTime(getUniqueUsernames, files);
+measureExecutionTime(getUsernamesInAllFiles, files);
+measureExecutionTime(getUsernamesInAtLeastNFiles, files, 10);
