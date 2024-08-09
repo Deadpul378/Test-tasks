@@ -19,7 +19,6 @@ app.post(`/webhook/${botToken}`, (req, res) => {
 
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
-// Переменные для хранения последних данных
 let lastWeatherForecast = "";
 let lastExchangeRate = "";
 
@@ -137,7 +136,7 @@ async function sendWeatherForecast(chatId, city, interval) {
         message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
       }
 
-      lastWeatherForecast = message.trim(); // Сохраняем последние данные
+      lastWeatherForecast = message.trim();
       bot.sendMessage(chatId, lastWeatherForecast);
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
@@ -162,7 +161,7 @@ async function sendExchangeRate(chatId, currency) {
       Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
       `;
 
-    lastExchangeRate = responseMessage.trim(); // Сохраняем последние данные
+    lastExchangeRate = responseMessage.trim();
     bot.sendMessage(chatId, lastExchangeRate);
   } catch (error) {
     console.error("Error retrieving exchange rates:", error);
