@@ -16,7 +16,10 @@ bot.onText(/\/start/, (msg) => {
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
+  if (userMessages.has(chatId)) return;
 
+  userMessages.add(chatId);
+  setTimeout(() => userMessages.delete(chatId), 1000);
   if (!text || msg.from.is_bot) return;
 
   switch (text) {
