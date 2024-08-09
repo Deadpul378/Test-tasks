@@ -19,7 +19,6 @@ app.post(`/webhook/${botToken}`, (req, res) => {
 
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
-// Переменные для хранения последних данных
 let lastWeatherForecast = "";
 let lastExchangeRates = { USD: "", EUR: "" };
 
@@ -137,7 +136,7 @@ async function sendWeatherForecast(chatId, city, interval) {
         message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
       }
 
-      lastWeatherForecast = message.trim(); // Сохраняем последние данные
+      lastWeatherForecast = message.trim();
       bot.sendMessage(chatId, lastWeatherForecast);
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
@@ -150,34 +149,22 @@ async function sendWeatherForecast(chatId, city, interval) {
 
 async function sendExchangeRate(chatId, currency) {
   try {
+    const response = await axios.get("https://api.exchangerate.host/latest", {
+      params: {
+        base: "UAH",
+        symbols: "USD,EUR",
+      },
+    });
+
+    const rates = response.data.rates;
     let rateMessage = "";
 
     if (currency === "USD") {
-      const privatResponse = await axios.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5");
-      const monoResponse = await axios.get("https://api.monobank.ua/bank/currency");
-
-      const privatRate = privatResponse.data.find((rate) => rate.ccy === "USD");
-      const monoRate = monoResponse.data.find((rate) => rate.currencyCodeA === 840 && rate.currencyCodeB === 980);
-
-      rateMessage = `
-        USD Exchange Rates:
-        PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
-        Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
-      `;
-      lastExchangeRates.USD = rateMessage.trim(); // Сохраняем последние данные по USD
+      rateMessage = `Курс 1 USD к UAH: ${rates.USD} UAH`;
+      lastExchangeRates.USD = rateMessage.trim();
     } else if (currency === "EUR") {
-      const privatResponse = await axios.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5");
-      const monoResponse = await axios.get("https://api.monobank.ua/bank/currency");
-
-      const privatRate = privatResponse.data.find((rate) => rate.ccy === "EUR");
-      const monoRate = monoResponse.data.find((rate) => rate.currencyCodeA === 978 && rate.currencyCodeB === 980);
-
-      rateMessage = `
-        EUR Exchange Rates:
-        PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
-        Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
-      `;
-      lastExchangeRates.EUR = rateMessage.trim(); // Сохраняем последние данные по EUR
+      rateMessage = `Курс 1 EUR к UAH: ${rates.EUR} UAH`;
+      lastExchangeRates.EUR = rateMessage.trim();
     }
 
     bot.sendMessage(chatId, rateMessage.trim());
