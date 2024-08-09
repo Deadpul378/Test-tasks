@@ -9,8 +9,7 @@ const bot = new TelegramBot(botToken);
 const app = express();
 app.use(express.json());
 
-// Установи Webhook
-const railwayUrl = "https://test-tasks-production.up.railway.app"; // Замени на свой URL
+const railwayUrl = "https://test-tasks-production.up.railway.app";
 bot.setWebHook(`${railwayUrl}/webhook/${botToken}`);
 
 app.post(`/webhook/${botToken}`, (req, res) => {
