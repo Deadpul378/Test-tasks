@@ -19,6 +19,10 @@ app.post(`/webhook/${botToken}`, (req, res) => {
 
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
+// Переменные для хранения последних данных
+let lastWeatherForecast = "";
+let lastExchangeRate = "";
+
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   sendMainMenu(chatId);
@@ -55,6 +59,7 @@ bot.on("message", async (msg) => {
       await sendExchangeRate(chatId, text);
       break;
     default:
+      bot.sendMessage(chatId, lastWeatherForecast || "No previous weather data available.");
       break;
   }
 });
@@ -132,13 +137,14 @@ async function sendWeatherForecast(chatId, city, interval) {
         message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
       }
 
-      bot.sendMessage(chatId, message.trim());
+      lastWeatherForecast = message.trim(); // Сохраняем последние данные
+      bot.sendMessage(chatId, lastWeatherForecast);
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
     }
   } catch (error) {
     console.error("Error retrieving weather data:", error);
-    bot.sendMessage(chatId, "Sorry, there was an error retrieving the weather data.");
+    bot.sendMessage(chatId, lastWeatherForecast || "Sorry, there was an error retrieving the weather data.");
   }
 }
 
@@ -156,10 +162,11 @@ async function sendExchangeRate(chatId, currency) {
       Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
       `;
 
-    bot.sendMessage(chatId, responseMessage.trim());
+    lastExchangeRate = responseMessage.trim(); // Сохраняем последние данные
+    bot.sendMessage(chatId, lastExchangeRate);
   } catch (error) {
     console.error("Error retrieving exchange rates:", error);
-    bot.sendMessage(chatId, "Sorry, there was an error retrieving the exchange rates.");
+    bot.sendMessage(chatId, lastExchangeRate || "Sorry, there was an error retrieving the exchange rates.");
   }
 }
 
