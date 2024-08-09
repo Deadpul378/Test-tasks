@@ -19,8 +19,9 @@ app.post(`/webhook/${botToken}`, (req, res) => {
 
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
+// Переменные для хранения последних данных
 let lastWeatherForecast = "";
-let lastExchangeRate = "";
+let lastExchangeRates = { USD: "", EUR: "" };
 
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
@@ -136,7 +137,7 @@ async function sendWeatherForecast(chatId, city, interval) {
         message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
       }
 
-      lastWeatherForecast = message.trim();
+      lastWeatherForecast = message.trim(); // Сохраняем последние данные
       bot.sendMessage(chatId, lastWeatherForecast);
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
@@ -149,23 +150,41 @@ async function sendWeatherForecast(chatId, city, interval) {
 
 async function sendExchangeRate(chatId, currency) {
   try {
-    const privatResponse = await axios.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5");
-    const monoResponse = await axios.get("https://api.monobank.ua/bank/currency");
+    let rateMessage = "";
 
-    const privatRate = privatResponse.data.find((rate) => rate.ccy === currency);
-    const monoRate = monoResponse.data.find((rate) => rate.currencyCodeA === (currency === "USD" ? 840 : 978) && rate.currencyCodeB === 980);
+    if (currency === "USD") {
+      const privatResponse = await axios.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5");
+      const monoResponse = await axios.get("https://api.monobank.ua/bank/currency");
 
-    const responseMessage = `
-      ${currency} Exchange Rates:
-      PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
-      Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
+      const privatRate = privatResponse.data.find((rate) => rate.ccy === "USD");
+      const monoRate = monoResponse.data.find((rate) => rate.currencyCodeA === 840 && rate.currencyCodeB === 980);
+
+      rateMessage = `
+        USD Exchange Rates:
+        PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
+        Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
       `;
+      lastExchangeRates.USD = rateMessage.trim(); // Сохраняем последние данные по USD
+    } else if (currency === "EUR") {
+      const privatResponse = await axios.get("https://api.privatbank.ua/p24api/pubinfo?json&exchange&coursid=5");
+      const monoResponse = await axios.get("https://api.monobank.ua/bank/currency");
 
-    lastExchangeRate = responseMessage.trim();
-    bot.sendMessage(chatId, lastExchangeRate);
+      const privatRate = privatResponse.data.find((rate) => rate.ccy === "EUR");
+      const monoRate = monoResponse.data.find((rate) => rate.currencyCodeA === 978 && rate.currencyCodeB === 980);
+
+      rateMessage = `
+        EUR Exchange Rates:
+        PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
+        Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
+      `;
+      lastExchangeRates.EUR = rateMessage.trim(); // Сохраняем последние данные по EUR
+    }
+
+    bot.sendMessage(chatId, rateMessage.trim());
   } catch (error) {
     console.error("Error retrieving exchange rates:", error);
-    bot.sendMessage(chatId, lastExchangeRate || "Sorry, there was an error retrieving the exchange rates.");
+    const lastRateMessage = lastExchangeRates[currency] || "Sorry, there was an error retrieving the exchange rates.";
+    bot.sendMessage(chatId, lastRateMessage);
   }
 }
 
