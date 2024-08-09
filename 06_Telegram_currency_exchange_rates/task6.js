@@ -149,17 +149,18 @@ async function sendWeatherForecast(chatId, city, interval) {
 
 async function sendExchangeRate(chatId, currency) {
   try {
-    const response = await axios.get("https://open.er-api.com/v6/latest/USD");
-
-    const rates = response.data.rates;
     let rateMessage = "";
 
     if (currency === "USD") {
+      const response = await axios.get("https://open.er-api.com/v6/latest/USD");
+      const rates = response.data.rates;
       rateMessage = `Курс 1 USD к UAH: ${rates.UAH}`;
-      lastExchangeRates.USD = rateMessage.trim(); // Сохраняем последние данные по USD
+      lastExchangeRates.USD = rateMessage.trim();
     } else if (currency === "EUR") {
-      rateMessage = `Курс 1 EUR к UAH: ${rates.EUR * rates.UAH}`;
-      lastExchangeRates.EUR = rateMessage.trim(); // Сохраняем последние данные по EUR
+      const response = await axios.get("https://open.er-api.com/v6/latest/EUR");
+      const rates = response.data.rates;
+      rateMessage = `Курс 1 EUR к UAH: ${rates.UAH}`;
+      lastExchangeRates.EUR = rateMessage.trim();
     }
 
     bot.sendMessage(chatId, rateMessage.trim());
