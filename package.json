@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node ./06_Telegram_currency_exchange_rates/task6.js"
   },
   "repository": {
     "type": "git",

@@ -12,6 +12,11 @@ async function addUser() {
 
     if (!name) break;
 
+    if (users.some((user) => user.name === name)) {
+      console.log(`Sorry, but a user with the name ${name} already exists.`);
+      continue;
+    }
+
     const { gender } = await inquirer.prompt({
       type: "list",
       name: "gender",
