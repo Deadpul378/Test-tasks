@@ -1,1 +1,1 @@
-worker: ./node 06_Telegram_currency_exchange_rates/task6.js
+worker: node ./06_Telegram_currency_exchange_rates/task6.js
