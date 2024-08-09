@@ -17,45 +17,53 @@ async function authenticate() {
 
 async function uploadFile(auth, filePath, fileName) {
   const drive = google.drive({ version: "v3", auth });
-  const fileMetadata = { name: fileName, parents: ["1s8mbgtBOnzoo2t-LfS8yxJgB7KMaWGHJ"] };
+  const fileMetadata = {
+    name: fileName,
+    parents: ["1s8mbgtBOnzoo2t-LfS8yxJgB7KMaWGHJ"],
+  };
   const media = { mimeType: "image/jpeg", body: fs.createReadStream(filePath) };
 
-  drive.files.create(
-    {
+  try {
+    const file = await drive.files.create({
       resource: fileMetadata,
       media: media,
       fields: "id, webViewLink",
-    },
-    (err, file) => {
-      if (err) {
-        console.error("Error uploading file:", err);
-        return;
-      }
-      console.log("File uploaded successfully!");
-      console.log("Link to file:", file.data.webViewLink);
+    });
 
-      inquirer
-        .prompt([
-          {
-            type: "confirm",
-            name: "shorten",
-            message: "Do you want to shorten the link?",
-            default: false,
-          },
-        ])
-        .then((answers) => {
-          if (answers.shorten) {
-            TinyURL.shorten(file.data.webViewLink, function (res, err) {
-              if (err) {
-                console.log("Error shortening URL:", err);
-                return;
-              }
-              console.log("Shortened URL:", res);
-            });
-          }
-        });
-    }
-  );
+    await drive.permissions.create({
+      fileId: file.data.id,
+      resource: {
+        role: "reader",
+        type: "anyone",
+      },
+    });
+
+    console.log("File uploaded successfully!");
+    console.log("Link to file:", file.data.webViewLink);
+
+    inquirer
+      .prompt([
+        {
+          type: "confirm",
+          name: "shorten",
+          message: "Do you want to shorten the link?",
+          default: false,
+        },
+      ])
+      .then((answers) => {
+        if (answers.shorten) {
+          TinyURL.shorten(file.data.webViewLink, function (res, err) {
+            if (err) {
+              console.log("Error shortening URL:", err);
+              return;
+            }
+            console.log("Shortened URL:", res);
+          });
+        }
+      });
+  } catch (err) {
+    console.error("Error uploading file:", err);
+  }
 }
 
 async function startApp() {
