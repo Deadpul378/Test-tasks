@@ -4,10 +4,7 @@ import axios from "axios";
 const botToken = "7079235887:AAHxixLSJsPaYPiaitCHG-m3tS6YjnVbrsc";
 const weatherApiKey = "b4614c7c96369265bf5a92c70c916dc7";
 
-const url = "https://railway.app/project/16e3c7af-03d8-4498-bcf7-a1e667daf373";
-
-const bot = new TelegramBot(botToken, { webHook: true });
-bot.setWebHook(`${url}/bot${botToken}`);
+const bot = new TelegramBot(botToken, { polling: true });
 
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
