@@ -16,11 +16,6 @@ bot.onText(/\/start/, (msg) => {
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
-  if (userMessages.has(chatId)) return;
-
-  userMessages.add(chatId);
-  setTimeout(() => userMessages.delete(chatId), 1000);
-  if (!text || msg.from.is_bot) return;
 
   switch (text) {
     case "Weather Forecast":
@@ -110,10 +105,14 @@ async function sendWeatherForecast(chatId, city, interval) {
           forecasts[day] = [];
         }
 
-        if (interval === 6 && date.getHours() % 6 === 0) {
-          forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
-        } else if (interval === 3 && date.getHours() % 3 === 0) {
-          forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
+        if (interval === 6) {
+          if (date.getHours() % 6 === 0) {
+            forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
+          }
+        } else {
+          if (date.getHours() % 3 === 0) {
+            forecasts[day].push(`${date.getHours()}:00 - ${forecast.main.temp}°C, ощущается как ${forecast.main.feels_like}°C, ${forecast.weather[0].description}`);
+          }
         }
       });
 
@@ -122,7 +121,7 @@ async function sendWeatherForecast(chatId, city, interval) {
         message += `${day}:\n${dayForecasts.join("\n")}\n\n`;
       }
 
-      bot.sendMessage(chatId, message.trim() || "Нет данных о погоде.");
+      bot.sendMessage(chatId, message.trim());
     } else {
       bot.sendMessage(chatId, "Sorry, no weather data available.");
     }
@@ -144,7 +143,7 @@ async function sendExchangeRate(chatId, currency) {
       ${currency} Exchange Rates:
       PrivatBank: Buy - ${privatRate.buy}, Sell - ${privatRate.sale}
       Monobank: Buy - ${monoRate.rateBuy}, Sell - ${monoRate.rateSell}
-    `;
+      `;
 
     bot.sendMessage(chatId, responseMessage.trim());
   } catch (error) {
