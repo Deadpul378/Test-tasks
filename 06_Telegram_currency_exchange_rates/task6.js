@@ -1,10 +1,22 @@
 import TelegramBot from "node-telegram-bot-api";
 import axios from "axios";
+import express from "express";
 
 const botToken = "7079235887:AAHxixLSJsPaYPiaitCHG-m3tS6YjnVbrsc";
 const weatherApiKey = "b4614c7c96369265bf5a92c70c916dc7";
 
-const bot = new TelegramBot(botToken, { polling: true });
+const bot = new TelegramBot(botToken);
+const app = express();
+app.use(express.json());
+
+// Установи Webhook
+const railwayUrl = "https://test-tasks-production.up.railway.app"; // Замени на свой URL
+bot.setWebHook(`${railwayUrl}/webhook/${botToken}`);
+
+app.post(`/webhook/${botToken}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
 
 bot.setMyCommands([{ command: "/start", description: "Start the bot" }]);
 
@@ -151,3 +163,8 @@ async function sendExchangeRate(chatId, currency) {
     bot.sendMessage(chatId, "Sorry, there was an error retrieving the exchange rates.");
   }
 }
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
